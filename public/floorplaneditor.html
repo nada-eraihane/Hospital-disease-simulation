@@ -1,0 +1,1540 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <title>Hospital Floor Plan Editor</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      :root {
+        --bg: #e2eeff;
+        --panel: #17048c;
+        --border: #17048c;
+        --text2: #ffffff;
+        --text: #17048c;
+        --button1:#d3e65c;
+        --button1-text: #17048c;
+        --button1-hover: #b4c44e;
+        --button2:#cd6ce6;
+        --button2-text: #ffffff;
+        --button2-hover: #973bb0;
+        --muted: #004aad;
+        --lightblue: #b1d2ff;
+        --accent: #d3e65c;
+        --accent2: #cd6ce6;
+        --grey: #1E293B;
+        --green: #6dd670;
+        --red: #f85149;
+        --yellow: #d3e65c;
+      }
+
+      body {
+        font-family: "Copperplate", sans-serif;
+        background: var(--bg); 
+        color: var(--text);
+        height: 100vh; 
+        display: flex; 
+        flex-direction: column;
+        overflow: hidden; 
+        user-select: none;
+      }
+
+      /* ── Top bar ── */
+      #topbar {
+        margin: 10px;
+        height: 48px; 
+        border-radius: 12px;
+        background: var(--panel);
+        display: flex; 
+        align-items: center;
+        padding: 20px ; 
+        gap: 8px; 
+        flex-shrink: 0;
+      }
+      #topbar .logo { 
+        font-size: 15px; 
+        font-weight: 700; 
+        letter-spacing: .12em; 
+        color: var(--text2); 
+        text-transform: uppercase; 
+        white-space: nowrap; 
+      }
+
+      #topbar .sub { 
+        font-size: 11px; 
+        color: var(--text2); 
+        white-space: nowrap; 
+      }
+
+      .spacer { flex: 1; }
+
+      .btn {
+        padding: 5px 13px; 
+        border-radius: 6px; 
+        border: none;
+        background: var(--button1); 
+        color: var(--button1-text); 
+        font-family: inherit;
+        font-size: 11px; 
+        cursor: pointer; 
+        white-space: nowrap;
+      }
+
+      .btn:hover { 
+        background-color: #b4c44e; 
+        
+      }
+      .btn.primary { 
+        background: var(--button2); 
+         
+        color: var(--button2-text); 
+      }
+      .btn.primary:hover { background: var(--button2-hover); }
+      .btn.danger { 
+        background-color: var(--red); 
+        color: var(--text2); 
+      }
+      .btn.danger:hover { background: #a53630; }
+      .btn.success { border-color: var(--); color: var(--lime); }
+      .btn.success:hover { background: var(--button1-hover); }
+      .btn.purple { 
+        border-color: var(--button1); 
+        color: var(--button1-text); }
+      .btn.purple:hover { background: var(--button1-hover); }
+      .btn:disabled { opacity: .35; pointer-events: none; }
+      .btn-group { display: flex; gap: 4px; }
+
+      /* ── Layout ── */
+      #main { 
+        display: flex; 
+        flex: 1; 
+        overflow: hidden; }
+
+      /* ── Sidebar ── */
+      #sidebar {
+        width: 200px; 
+        background: var(--lightblue);
+        border-radius: 12px 0 0 12px;
+        display: flex; 
+        margin: 0 10px 10px 10px;
+        flex-direction: column;
+        overflow-y: auto; 
+        flex-shrink: 0;
+      }
+      .sec { 
+        padding: 10px; 
+        border-bottom: 1px solid var(--border); }
+
+      .sec-label {
+        font-size: 14px; 
+        font-weight: 700; 
+        text-transform: uppercase; 
+        color: var(--text); 
+        margin-bottom: 6px;
+        text-align: center;
+      }
+
+      .tool-btn {
+        display: flex; 
+        align-items: center; 
+        gap: 7px; 
+        width: 100%;
+        padding: 5px 8px; 
+        border-radius: 6px; 
+        border: 1px solid transparent;
+        background: transparent; 
+        color: var(--text); 
+        font-family: inherit;
+        font-size: 12px; 
+        cursor: pointer; 
+        transition: all .12s;
+        margin-bottom: 2px; 
+        text-align: left;
+      }
+      .tool-btn:hover { 
+        background: var(--button1-hover); }
+      .tool-btn.active { 
+        background:  var(--button1); 
+  
+        color: var(--button1-text); }
+      .ti { 
+        width: 18px; 
+        text-align: center; 
+        font-size: 13px; }
+
+      .shortcut { 
+        color: #17048c; 
+        font-size: 9px; 
+        margin-left: auto; }
+
+      .legend-row { 
+        display: flex; 
+        align-items: center; 
+        gap: 6px; 
+        font-size: 12px; 
+        color: var(--text); 
+        margin-bottom: 3px; }
+
+      .swatch { 
+        width: 10px; 
+        height: 10px; 
+        border-radius: 2px; 
+        border: 1px solid rgba(255,255,255,.15); 
+        flex-shrink: 0; }
+
+      .dot { 
+        width: 9px; 
+        height: 9px; 
+        border-radius: 50%; 
+        flex-shrink: 0; }
+
+      .stat-row { 
+        font-size: 12px; 
+        color: var(--text); 
+        line-height: 1.9; }
+
+      .stat-row b { 
+        color: var(--text); }
+
+      /* ── Canvas area ── */
+      #canvas-wrap {
+        flex: 1; 
+        overflow: auto; 
+        background: #e2eeff;
+        padding: 0; 
+        display: flex;
+        align-items: flex-start; 
+        justify-content: flex-start;
+      }
+      #canvas-container { border: 1px solid var(--border)}
+
+      /* ── Status bar ── */
+      #statusbar {
+        height: 26px; 
+        background: var(--panel);
+        border-top: 1px solid var(--border);
+        display: flex; 
+        align-items: center;
+        padding: 0 14px; 
+        gap: 20px;
+        font-size: 10px; 
+        color: var(--text2); 
+        flex-shrink: 0;
+      }
+      #statusbar b { color: var(--text2); }
+      #status-hint { margin-left: auto; 
+        color: var(--highlight); }
+
+      /* ── Modals ── */
+      .modal-overlay {
+        display: none; 
+        position: fixed; 
+        inset: 0;
+        background: rgba(10, 2, 80, 0.521); 
+        z-index: 200;
+        align-items: center; 
+        justify-content: center;
+      }
+      .modal-overlay.show { display: flex; }
+      .modal-box {
+        background: var(--panel); 
+        border: none;
+        border-radius: 12px; 
+        color: var(--text2);
+        padding: 20px; 
+        width: 460px;
+        box-shadow: 0 16px 50px rgba(0,0,0,.6);
+        max-height: 500px; 
+        overflow-y: auto;
+      }
+      .modal-box h3 { 
+        font-size: 13px; 
+        margin-bottom: 14px; 
+        color: var(--text2); }
+
+      .fl { margin-bottom: 10px; }
+      .fl label {
+        display: block; font-size: 12px;
+        text-transform: uppercase;
+        color: var(--text2); 
+        margin-bottom: 4px;
+      }
+      .fl input[type="text"], .fl input[type="number"], .fl select {
+        width: 100%; 
+        padding: 6px 9px; 
+        background: var(--lightblue);
+        border: 1px solid var(--border); 
+        border-radius: 6px;
+        color: var(--panel); 
+        font-family: inherit; 
+        font-size: 12px; 
+        outline: none;
+      }
+      .fl input:focus, .fl select:focus { border-color: var(--highlight); }
+      .fl-row { display: flex; gap: 8px; }
+      .fl-row .fl { flex: 1; }
+      .fl input[type="color"] {
+        width: 36px; height: 28px; padding: 1px; border: 1px solid var(--border);
+        border-radius: 4px; background: var(--bg); cursor: pointer;
+      }
+      .fl .color-row { display: flex; align-items: center; gap: 8px; }
+
+      .cbgroup { 
+        display: flex; 
+        flex-wrap: wrap; 
+        gap: 8px; }
+
+      .cbgroup label {
+        margin-top: 10px;
+        display: flex; 
+        align-items: center; 
+        gap: 8px;
+        font-size: 12px; 
+        color: var(--text2); 
+        text-transform: none;
+        letter-spacing: 0; 
+        cursor: pointer;
+      }
+      .cbgroup input { 
+        cursor: pointer; 
+        accent-color: var(--button1);
+        color: #ffffff;
+      }
+
+      .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+
+      /* ── Warning banner ── */
+      .name-warn {
+        display: none; 
+        padding: 5px 8px; 
+        border-radius: 6px;
+        background: rgba(211,230,92,.12); 
+        border: 1px solid rgba(211,230,92,.3);
+        font-size: 10px; 
+        color: var(--lime); 
+        margin-bottom: 8px; 
+        line-height: 1.4;
+      }
+      .name-warn.show { display: block; }
+
+      /* Validation list */
+      .val-list { max-height: 200px; 
+        overflow-y: auto; 
+        margin: 10px 0; }
+      .val-item { display: flex; align-items: flex-start; gap: 6px; font-size: 12px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+      .val-icon { flex-shrink: 0; font-size: 16px; }
+      .val-ok { color: var(--green); }
+      .val-warn { color: var(--lime); }
+      .val-err { color: var(--red); }
+      .val-msg { line-height: 1.4; }
+
+      /* ── Scrollbar ── */
+      ::-webkit-scrollbar { width: 6px; height: 6px; padding-top: 20px;}
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; margin:2px;}
+      ::-webkit-scrollbar-thumb:hover { background: #4a3ac0; }
+    </style>
+  </head>
+  <body>
+
+    <!-- ═══ TOP BAR ═══ -->
+    <div id="topbar">
+      <div class="logo">FloorPlan</div>
+      <div class="sub">Hospital Simulation Layout Designer</div>
+      <div class="spacer"></div>
+      <div class="btn-group">
+        <button class="btn" id="btn-undo" onclick="undo()" disabled title="Ctrl+Z">↩ Undo</button>
+        <button class="btn" id="btn-redo" onclick="redo()" disabled title="Ctrl+Y">↪ Redo</button>
+      </div>
+      <button class="btn danger" onclick="clearAll()">Clear</button>
+      <button class="btn primary" onclick="openExportModal()">Export JSON</button>
+    </div>
+
+    <div id="main">
+      <!-- ═══ SIDEBAR ═══ -->
+      <div id="sidebar">
+        <div class="sec">
+          <div class="sec-label">Tools</div>
+          <button class="tool-btn active" id="tool-select" onclick="setTool('select')"><span class="ti">↖</span> Select <span class="shortcut">S</span></button>
+          <button class="tool-btn" id="tool-wall" onclick="setTool('wall')"><span class="ti">✏</span> Draw Wall <span class="shortcut">W</span></button>
+          <button class="tool-btn" id="tool-room" onclick="setTool('room')"><span class="ti">⬜</span> Draw Room <span class="shortcut">R</span></button>
+          <button class="tool-btn" id="tool-erase" onclick="setTool('erase')"><span class="ti">✕</span> Erase <span class="shortcut">E</span></button>
+        </div>
+
+        <div class="sec">
+          <div class="sec-label">Place Objects</div>
+          <button class="tool-btn" id="tool-bed" onclick="setTool('bed')"><span class="ti">🛏</span> Bed</button>
+          <button class="tool-btn" id="tool-nursestation" onclick="setTool('nursestation')"><span class="ti">🏥</span> Nurse Station</button>
+          <button class="tool-btn" id="tool-door" onclick="setTool('door')"><span class="ti">🚪</span> Door</button>
+          <button class="tool-btn" id="tool-entrance" onclick="setTool('entrance')"><span class="ti">🏠</span> Entrance</button>
+        </div>
+
+        <div class="sec">
+          <div class="sec-label">Room Types</div>
+          <div id="room-legend"></div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-label">Objects</div>
+          <div id="obj-legend"></div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-label">Info</div>
+          <div class="stat-row">
+            Grid: <b id="inf-size">—</b><br/>
+            Walls: <b id="inf-walls">0</b><br/>
+            Rooms: <b id="inf-rooms">0</b><br/>
+            Objects: <b id="inf-objs">0</b>
+          </div>
+        </div>
+      </div>
+
+      <div id="canvas-wrap">
+        <div id="canvas-container"><canvas id="c"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ═══ STATUS BAR ═══ -->
+    <div id="statusbar">
+      <span>Tool: <b id="st-tool">Select</b></span>
+      <span>Cursor: <b id="st-pos">—</b></span>
+      <span>Snap: <b>20 px</b></span>
+      <span id="status-hint">Click to select objects</span>
+    </div>
+
+    <!-- ═══ GRID SETUP MODAL ═══ -->
+    <div class="modal-overlay show" id="grid-modal-overlay">
+      <div class="modal-box" style="width:340px;">
+        <h3>Grid Setup</h3>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:12px;">Each grid cell = 1 m × 1 m. Set floor dimensions in metres.</p>
+        <div class="fl-row">
+          <div class="fl">
+            <label>Floor Width (m)</label>
+            <input type="number" id="grid-w" value="50" min="5" max="150" step="1"/>
+          </div>
+          <div class="fl">
+            <label>Floor Depth (m)</label>
+            <input type="number" id="grid-h" value="22" min="5" max="100" step="1"/>
+          </div>
+        </div>
+        <div class="fl-row">
+          <div class="fl">
+            <label>Cell Size (px)</label>
+            <input type="number" id="grid-cell" value="20" min="10" max="40" step="5"/>
+          </div>
+          <div class="fl">
+            <label>Ceiling Height (m)</label>
+            <input type="number" id="grid-ceiling" value="2.7" min="2.0" max="6.0" step="0.1"/>
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--text2);opacity:.6;margin-top:6px;line-height:1.5;">
+          1 cell = 1 m² · Ceiling height is used for room volume (V = A × h)
+        </div>
+        <div class="modal-actions">
+          <button class="btn primary" style="font-size: 12px; width: 100%;" onclick="initCanvas()">Start Editor</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ ROOM MODAL ═══ -->
+    <div class="modal-overlay" id="room-modal-overlay">
+      <div class="modal-box">
+        <h3 id="room-modal-title">Configure Room</h3>
+        <div id="name-warn" class="name-warn">⚠ A room with this name already exists. It will be auto-numbered if you proceed.</div>
+        <div class="fl">
+          <label>Room Name</label>
+          <input type="text" id="room-name" placeholder="e.g. Ward A, ICU 1…" oninput="checkDupeName()"/>
+        </div>
+        <div class="fl">
+          <label>Room Type</label>
+          <select id="room-type" onchange="onRoomTypeChange()">
+            <option value="ward">Ward</option>
+            <option value="icu">ICU</option>
+            <option value="reception">Reception</option>
+            <option value="corridor">Corridor</option>
+            <option value="waiting">Waiting Area</option>
+            <option value="staff_room">Staff Room</option>
+            <option value="washroom">Washroom</option>
+            <option value="er">Emergency Room</option>
+            <option value="special">Special Room</option>
+          </select>
+        </div>
+        <div class="fl">
+          <label>Room Colour</label>
+          <div class="color-row">
+            <input type="color" id="room-color" value="#004aad"/>
+            <span style="font-size:12px;color:var(--text2)" id="room-color-hint">Default for ward</span>
+          </div>
+        </div>
+        <div class="fl-row">
+          <div class="fl">
+            <label>Max Capacity</label>
+            <input type="number" id="room-capacity" value="10" min="1" max="200"/>
+          </div>
+          <div class="fl">
+            <label>Ventilation (ACH)</label>
+            <input type="number" id="room-ventilation" value="6" min="0.5" max="50" step="0.5" oninput="updateACHLabel()"/>
+            <div id="ach-quality" style="margin-top:4px;font-size:11px;color:var(--text2);display:flex;align-items:center;gap:6px;">
+              <span id="ach-dot" style="width:8px;height:8px;border-radius:50%;display:inline-block;background:#d3e65c;"></span>
+              <span id="ach-label">Moderate (3–6 ACH)</span>
+            </div>
+            <div style="margin-top:6px;font-size:9px;color:var(--text2);opacity:.65;line-height:1.4;">
+              Poor &lt;3 · Moderate 3–6 · Good 6–12 · Great 12+
+            </div>
+          </div>
+        </div>
+        <div class="fl" id="room-volume-row" style="display:none;">
+          <label>Calculated Volume</label>
+          <div style="font-size:12px;color:var(--text2);" id="room-volume-display">—</div>
+        </div>
+        <div class="fl">
+          <label>Access Control</label>
+          <div class="cbgroup">
+            <label><input type="checkbox" id="ac-doctor" checked/> Doctor</label>
+            <label><input type="checkbox" id="ac-nurse"/> Nurse</label>
+            <label><input type="checkbox" id="ac-patient"/> Patient</label>
+            <label><input type="checkbox" id="ac-visitor"/> Visitor</label>
+            <label><input type="checkbox" id="ac-volunteer"/> Volunteer</label>
+            <label><input type="checkbox" id="ac-cleaner" checked/> Cleaner</label>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn" onclick="cancelRoom()">Cancel</button>
+          <button class="btn primary" id="room-confirm-btn" onclick="confirmRoom()">Add Room</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ DOOR MODAL ═══ -->
+    <div class="modal-overlay" id="door-modal-overlay">
+      <div class="modal-box" style="width:320px;">
+        <h3>Door Configuration</h3>
+        <p style="font: size 12px;color:var(--text2);margin-bottom:10px;">Select the two rooms this door connects.</p>
+        <div class="fl">
+          <label>Room 1</label>
+          <select id="door-room1"></select>
+        </div>
+        <div class="fl">
+          <label>Room 2</label>
+          <select id="door-room2"></select>
+        </div>
+        <div class="modal-actions">
+          <button class="btn" onclick="cancelDoor()">Cancel</button>
+          <button class="btn primary" onclick="confirmDoor()">Place Door</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ EXPORT MODAL ═══ -->
+    <div class="modal-overlay" id="export-modal-overlay">
+      <div class="modal-box" style="width:420px;">
+        <h3>Export Floor Plan</h3>
+        <div class="fl">
+          <label>File Name</label>
+          <input type="text" id="export-filename" value="floor_plan" placeholder="my_hospital"/>
+        </div>
+        <div class="fl">
+          <label>Floor Plan Name</label>
+          <input type="text" id="export-name" value="Custom Hospital" placeholder="Hospital Name"/>
+        </div>
+        <div style="margin:12px 0 6px;font: size 12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;">Validation</div>
+        <div class="val-list" id="val-list"></div>
+        <div class="modal-actions">
+          <button class="btn" onclick="closeExportModal()">Cancel</button>
+          <button class="btn primary" id="export-confirm-btn" onclick="doExport()">Download JSON</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <script>
+    
+    let GRID = 20, W = 1000, H = 440;
+    let CEILING_H = 2.7; 
+    const GRID_EMPHASIS = 10; 
+
+    const ROOM_TYPE_COLORS = {
+      ward:       { fill: 'rgba(0,74,173,.15)',    stroke: '#004aad' },
+      icu:        { fill: 'rgba(248,81,73,.15)',   stroke: '#f85149' },
+      reception:  { fill: 'rgba(99,190,100,.15)',  stroke: '#63be64' },
+      corridor:   { fill: 'rgba(211,230,92,.15)',  stroke: '#d3e65c' },
+      waiting:    { fill: 'rgba(177,210,255,.15)', stroke: '#b1d2ff' },
+      staff_room: { fill: 'rgba(203,108,230,.15)', stroke: '#cb6ce6' },
+      washroom:   { fill: 'rgba(240,136,62,.15)',  stroke: '#f0883e' },
+      er:  { fill: 'rgba(219,97,162,.15)',  stroke: '#db61a2' },
+      special:    { fill: 'rgba(23,4,140,.2)',     stroke: '#17048c' },
+    };
+
+    const ROOM_TYPE_LABELS = {
+      ward: 'Ward', 
+      icu: 'ICU', 
+      reception: 'Reception', 
+      corridor: 'Corridor',
+      waiting: 'Waiting Area', 
+      staff_room: 'Staff Room', 
+      washroom: 'Washroom',
+      er: 'Emergency Room', 
+      special: 'Special Room',
+    };
+
+    const OBJ_COLS = {
+      bed: '#004aad', nursestation: '#cb6ce6',
+      door: '#2dd4bf', entrance: '#f85149',
+    };
+    const OBJ_EMOJI = {
+      bed: '🛏', nursestation: '🏥',
+      door: '🚪', entrance: '🏠',
+    };
+    const OBJ_LABELS = {
+      bed: 'Bed', nursestation: 'Nurse Station',
+      door: 'Door', entrance: 'Entrance',
+    };
+    const OBJECT_TYPES = ['bed','nursestation','door','entrance'];
+
+    let tool = 'select';
+    let drawing = false, startPt = null, preview = null;
+    let pendingPolygon = [];        
+    let polyPreviews = [];          
+    let pendingDoorPos = null;
+    let editingRoomRef = null;
+
+    const store = {
+      walls: [],    rooms: [],    objects: [],
+    };
+
+    let history = [], historyIdx = -1;
+    const MAX_HISTORY = 80;
+
+   
+    function saveState() {
+      const snapshot = JSON.stringify(store);
+      history = history.slice(0, historyIdx + 1);
+      history.push(snapshot);
+      if (history.length > MAX_HISTORY) history.shift();
+      historyIdx = history.length - 1;
+      updateUndoRedoBtns();
+    }
+    function undo() {
+      if (historyIdx <= 0) return;
+      historyIdx--;
+      restoreState(history[historyIdx]);
+    }
+    function redo() {
+      if (historyIdx >= history.length - 1) return;
+      historyIdx++;
+      restoreState(history[historyIdx]);
+    }
+    
+    function restoreState(json) {
+      const s = JSON.parse(json);
+      store.walls = s.walls; store.rooms = s.rooms;
+      store.objects = s.objects;
+      rebuildCanvas();
+      updateUndoRedoBtns();
+    }
+    
+    function updateUndoRedoBtns() {
+      document.getElementById('btn-undo').disabled = (historyIdx <= 0);
+      document.getElementById('btn-redo').disabled = (historyIdx >= history.length - 1);
+    }
+    let canvas;
+
+ 
+    function initCanvas() {
+      GRID = Math.max(10, parseInt(document.getElementById('grid-cell').value) || 20);
+      const widthM = Math.max(5, parseInt(document.getElementById('grid-w').value) || 50);
+      const heightM = Math.max(5, parseInt(document.getElementById('grid-h').value) || 22);
+      CEILING_H = parseFloat(document.getElementById('grid-ceiling').value) || 2.7;
+      W = widthM * GRID;
+      H = heightM * GRID;
+
+      document.getElementById('grid-modal-overlay').classList.remove('show');
+
+      canvas = new fabric.Canvas('c', {
+        width: W, height: H, selection: false, backgroundColor: '#ffffff',
+      });
+
+      drawGrid();
+      document.getElementById('inf-size').textContent = `${widthM} × ${heightM} m · h = ${CEILING_H} m`;
+      buildLegends();
+      setTool('select');
+      attachCanvasEvents();
+      saveState();
+    }
+
+    
+    function drawGrid() {
+      const cols = W / GRID, rows = H / GRID;
+      for (let x = 0; x <= cols; x++) {
+        const isMajor = x % GRID_EMPHASIS === 0;
+        canvas.add(new fabric.Line([x*GRID, 0, x*GRID, H], {
+          stroke: isMajor ? '#b0b8c4' : '#dde2e8',
+          strokeWidth: isMajor ? 1 : 0.5,
+          selectable: false, evented: false, data: { kind: 'grid' },
+        }));
+      }
+      for (let y = 0; y <= rows; y++) {
+        const isMajor = y % GRID_EMPHASIS === 0;
+        canvas.add(new fabric.Line([0, y*GRID, W, y*GRID], {
+          stroke: isMajor ? '#b0b8c4' : '#dde2e8',
+          strokeWidth: isMajor ? 1 : 0.5,
+          selectable: false, evented: false, data: { kind: 'grid' },
+        }));
+      }
+    }
+
+    
+    const snap = v => Math.round(v / GRID) * GRID;
+    
+    const snapP = pt => ({ x: snap(pt.x), y: snap(pt.y) });
+
+    function makeRoomFillFromColor(hex) {
+      const r = parseInt(hex.slice(1,3),16);
+      const g = parseInt(hex.slice(3,5),16);
+      const b = parseInt(hex.slice(5,7),16);
+      return `rgba(${r},${g},${b},.15)`;
+    }
+
+    
+    function polygonCentroid(pts) {
+      const n = pts.length; if (!n) return [0,0];
+      return [pts.reduce((s,p)=>s+p[0],0)/n, pts.reduce((s,p)=>s+p[1],0)/n];
+    }
+
+   
+    function polygonBBox(pts) {
+      let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+      pts.forEach(p => { minX=Math.min(minX,p[0]); minY=Math.min(minY,p[1]); maxX=Math.max(maxX,p[0]); maxY=Math.max(maxY,p[1]); });
+      return { minX, minY, maxX, maxY, w: maxX-minX, h: maxY-minY };
+    }
+
+    
+    function pointInPolygon(px, py, polygon) {
+      let inside = false;
+      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const xi = polygon[i][0], yi = polygon[i][1];
+        const xj = polygon[j][0], yj = polygon[j][1];
+        if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) {
+          inside = !inside;
+        }
+      }
+      return inside;
+    }
+
+    
+    function findRoomsNearPoint(px, py) {
+      const containing = [];
+      const nearby = [];
+      const rest = [];
+      const threshold = GRID * 2;
+
+      store.rooms.forEach(r => {
+        if (pointInPolygon(px, py, r.polygon)) {
+          containing.push(r.name);
+        } else {
+          
+          let minEdgeDist = Infinity;
+          for (let i = 0; i < r.polygon.length; i++) {
+            const j = (i + 1) % r.polygon.length;
+            const ax = r.polygon[i][0], ay = r.polygon[i][1];
+            const bx = r.polygon[j][0], by = r.polygon[j][1];
+            
+            const dx = bx - ax, dy = by - ay;
+            const len2 = dx * dx + dy * dy;
+            let t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2));
+            const projX = ax + t * dx, projY = ay + t * dy;
+            const dist = Math.hypot(px - projX, py - projY);
+            minEdgeDist = Math.min(minEdgeDist, dist);
+          }
+          if (minEdgeDist <= threshold) {
+            nearby.push({ name: r.name, dist: minEdgeDist });
+          } else {
+            const c = polygonCentroid(r.polygon);
+            rest.push({ name: r.name, dist: Math.hypot(px - c[0], py - c[1]) });
+          }
+        }
+      });
+
+      nearby.sort((a, b) => a.dist - b.dist);
+      rest.sort((a, b) => a.dist - b.dist);
+      return [...containing, ...nearby.map(n => n.name), ...rest.map(n => n.name)];
+    }
+
+    
+    function buildLegends() {
+      let rl = '';
+      for (const [type, cols] of Object.entries(ROOM_TYPE_COLORS)) {
+        rl += `<div class="legend-row"><span class="swatch" style="background:${cols.fill};border-color:${cols.stroke}"></span>${ROOM_TYPE_LABELS[type]}</div>`;
+      }
+      document.getElementById('room-legend').innerHTML = rl;
+
+      let ol = '';
+      for (const type of OBJECT_TYPES) {
+        ol += `<div class="legend-row"><span class="dot" style="background:${OBJ_COLS[type]}"></span>${OBJ_LABELS[type]}</div>`;
+      }
+      document.getElementById('obj-legend').innerHTML = ol;
+    }
+
+    const HINTS = {
+      select: 'Click room to edit · Drag objects to move · Delete to remove',
+      wall: 'Click & drag to draw a wall — snaps to grid',
+      room: 'Click to place vertices · Double-click or Enter to close shape',
+      erase: 'Click on any wall, room or object to delete it',
+      bed: 'Click on canvas to place a bed',
+      nursestation: 'Click to place a nurse station',
+      door: 'Click to place a door (configure connections)',
+      entrance: 'Click to place an entrance/exit point',
+    };
+
+    
+    function achQuality(ach) {
+      if (ach < 3) return { label: 'Poor', color: '#f85149' };
+      if (ach < 6) return { label: 'Moderate', color: '#d3e65c' };
+      if (ach < 12) return { label: 'Good', color: '#6dd670' };
+      return { label: 'Great', color: '#63be64' };
+    }
+    
+    function achRangeText(ach) {
+      if (ach < 3) return 'Poor (<3 ACH)';
+      if (ach < 6) return 'Moderate (3\u20136 ACH)';
+      if (ach < 12) return 'Good (6\u201312 ACH)';
+      return 'Great (12+ ACH)';
+    }
+    
+    function updateACHLabel() {
+      const ach = parseFloat(document.getElementById('room-ventilation').value) || 6;
+      const q = achQuality(ach);
+      document.getElementById('ach-dot').style.background = q.color;
+      document.getElementById('ach-label').textContent = achRangeText(ach);
+    }
+
+    
+    function polygonAreaM2(pts) {
+      let area = 0;
+      const n = pts.length;
+      for (let i = 0; i < n; i++) {
+        const j = (i + 1) % n;
+        area += pts[i][0] * pts[j][1];
+        area -= pts[j][0] * pts[i][1];
+      }
+      area = Math.abs(area) / 2;
+      
+      return area / (GRID * GRID);
+    }
+
+   
+    function setTool(t) {
+      
+      if (tool === 'room' && t !== 'room') cancelPolygon();
+
+      tool = t;
+      document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+      const btn = document.getElementById('tool-' + t);
+      if (btn) btn.classList.add('active');
+      document.getElementById('st-tool').textContent = t.charAt(0).toUpperCase() + t.slice(1);
+      document.getElementById('status-hint').textContent = HINTS[t] || '';
+      if (!canvas) return;
+      const isSelect = t === 'select';
+      canvas.selection = isSelect;
+      canvas.forEachObject(obj => { obj.selectable = isSelect && obj.data?.movable; });
+      canvas.discardActiveObject();
+      canvas.defaultCursor = isSelect ? 'default' : t === 'erase' ? 'not-allowed' : 'crosshair';
+      canvas.renderAll();
+    }
+
+    
+    function clearPolyPreviews() {
+      polyPreviews.forEach(o => canvas.remove(o));
+      polyPreviews = [];
+    }
+
+    
+    function drawPolyPreview(mouseSnap) {
+      clearPolyPreviews();
+      if (pendingPolygon.length === 0) return;
+
+      for (let i = 0; i < pendingPolygon.length - 1; i++) {
+        const l = new fabric.Line([pendingPolygon[i].x, pendingPolygon[i].y, pendingPolygon[i+1].x, pendingPolygon[i+1].y], {
+          stroke: '#cb6ce6', strokeWidth: 2, selectable: false, evented: false,
+        });
+        polyPreviews.push(l); canvas.add(l);
+      }
+
+      if (mouseSnap) {
+        const last = pendingPolygon[pendingPolygon.length - 1];
+        const ml = new fabric.Line([last.x, last.y, mouseSnap.x, mouseSnap.y], {
+          stroke: '#cb6ce6', strokeWidth: 1.5, strokeDashArray: [5,4],
+          selectable: false, evented: false,
+        });
+        polyPreviews.push(ml); canvas.add(ml);
+
+        if (pendingPolygon.length >= 2) {
+          const cl = new fabric.Line([mouseSnap.x, mouseSnap.y, pendingPolygon[0].x, pendingPolygon[0].y], {
+            stroke: '#cb6ce6', strokeWidth: 1, strokeDashArray: [3,5], opacity: .4,
+            selectable: false, evented: false,
+          });
+          polyPreviews.push(cl); canvas.add(cl);
+        }
+      }
+
+      pendingPolygon.forEach((p, i) => {
+        const c = new fabric.Circle({
+          left: p.x - 4, top: p.y - 4, radius: 4,
+          fill: i === 0 ? '#d3e65c' : '#cb6ce6', stroke: '#fff', strokeWidth: 1,
+          selectable: false, evented: false,
+        });
+        polyPreviews.push(c); canvas.add(c);
+      });
+
+      canvas.renderAll();
+    }
+
+
+    function finishPolygon() {
+      if (pendingPolygon.length < 3) {
+        cancelPolygon();
+        return;
+      }
+      clearPolyPreviews();
+      const polygon = pendingPolygon.map(p => [p.x, p.y]);
+      pendingPolygon = [];
+      editingRoomRef = null;
+
+      window._pendingPolyPoints = polygon;
+      openRoomModal();
+    }
+
+  
+    function cancelPolygon() {
+      pendingPolygon = [];
+      clearPolyPreviews();
+      canvas.renderAll();
+    }
+
+  
+    function attachCanvasEvents() {
+
+      canvas.on('object:modified', e => {
+        const obj = e.target;
+        if (obj && obj.data?.kind === 'object' && obj.data.ref) {
+          const newX = snap(obj.left + 12);
+          const newY = snap(obj.top + 12);
+          obj.set({ left: newX - 12, top: newY - 12 });
+          obj.setCoords();
+          obj.data.ref.x = newX;
+          obj.data.ref.y = newY;
+          canvas.renderAll();
+          saveState();
+        }
+      });
+
+      canvas.on('mouse:move', e => {
+        const ptr = canvas.getPointer(e.e);
+        const sp = snapP(ptr);
+        document.getElementById('st-pos').textContent = `${sp.x}, ${sp.y}`;
+
+  
+        if (tool === 'room' && pendingPolygon.length > 0) {
+          drawPolyPreview(sp);
+          return;
+        }
+
+        if (!drawing || !startPt) return;
+        if (tool === 'wall') {
+          if (preview) canvas.remove(preview);
+          preview = new fabric.Line([startPt.x, startPt.y, sp.x, sp.y], {
+            stroke: '#1a1d23', strokeWidth: 3, strokeLineCap: 'round',
+            selectable: false, evented: false,
+          });
+          canvas.add(preview); canvas.renderAll();
+        }
+      });
+
+      canvas.on('mouse:down', e => {
+
+        if (tool === 'select') {
+          const target = canvas.findTarget(e.e);
+          if (target && target.data?.kind === 'room') {
+            editingRoomRef = target.data.ref;
+            openRoomModalForEdit(target.data.ref);
+          }
+          return;
+        }
+        const sp = snapP(canvas.getPointer(e.e));
+
+
+        if (tool === 'erase') {
+          const target = canvas.findTarget(e.e);
+          if (target && target.data?.kind && target.data.kind !== 'grid' && target.data.kind !== 'roomlabel') {
+            eraseObject(target);
+            saveState();
+          }
+          return;
+        }
+
+
+        if (['bed','nursestation','entrance'].includes(tool)) {
+          placeObject(tool, sp.x, sp.y); saveState(); return;
+        }
+
+
+        if (tool === 'door') {
+          pendingDoorPos = { x: sp.x, y: sp.y };
+          openDoorModal(sp.x, sp.y);
+          return;
+        }
+
+  
+        if (tool === 'room') {
+  
+          if (pendingPolygon.length >= 3) {
+            const first = pendingPolygon[0];
+            if (Math.abs(sp.x - first.x) <= GRID && Math.abs(sp.y - first.y) <= GRID) {
+              finishPolygon();
+              return;
+            }
+          }
+          pendingPolygon.push({ x: sp.x, y: sp.y });
+          drawPolyPreview(sp);
+          document.getElementById('status-hint').textContent = `${pendingPolygon.length} point(s) · Double-click / Enter to close · Click first point to snap-close`;
+          return;
+        }
+
+
+        if (tool === 'wall') {
+          drawing = true;
+          startPt = sp;
+        }
+      });
+
+      canvas.on('mouse:up', e => {
+        if (!drawing) return;
+        drawing = false;
+        const sp = snapP(canvas.getPointer(e.e));
+        if (preview) { canvas.remove(preview); preview = null; }
+
+        if (tool === 'wall') {
+          if (startPt.x !== sp.x || startPt.y !== sp.y) {
+            addWall(startPt, sp);
+            saveState();
+          }
+        }
+        startPt = null;
+      });
+
+ 
+      canvas.on('mouse:dblclick', e => {
+        if (tool === 'room' && pendingPolygon.length >= 3) {
+          finishPolygon();
+          return;
+        }
+      });
+    }
+
+    function addWall(a, b) {
+      const wallRec = { x1: a.x, y1: a.y, x2: b.x, y2: b.y };
+      store.walls.push(wallRec);
+      renderWall(wallRec);
+      reorderCanvas(); updateInfo();
+    }
+    
+    function renderWall(rec) {
+      const line = new fabric.Line([rec.x1, rec.y1, rec.x2, rec.y2], {
+        stroke: '#1a1d23', strokeWidth: 3, strokeLineCap: 'round',
+        selectable: false, evented: true, hoverCursor: 'pointer',
+        data: { kind: 'wall', ref: rec, labels: [] },
+      });
+      canvas.add(line);
+    }
+
+    
+    function placeObject(type, px, py, connects) {
+      const rec = { type, x: px, y: py };
+      if (connects) rec.connects = connects;
+      store.objects.push(rec);
+      renderObject(rec);
+      reorderCanvas(); updateInfo();
+    }
+
+    
+    function renderObject(rec) {
+      const col = OBJ_COLS[rec.type];
+      const circle = new fabric.Circle({
+        radius: 12, fill: col, stroke: '#fff', strokeWidth: 2,
+        originX: 'center', originY: 'center',
+      });
+      const label = new fabric.Text(OBJ_EMOJI[rec.type], {
+        fontSize: 12, originX: 'center', originY: 'center', top: 1,
+      });
+      const grp = new fabric.Group([circle, label], {
+        left: rec.x - 12, top: rec.y - 12,
+        selectable: tool === 'select', hasControls: false, hasBorders: true,
+        lockRotation: true, lockScalingX: true, lockScalingY: true,
+        evented: true, hoverCursor: 'pointer',
+        data: { kind: 'object', type: rec.type, ref: rec, labels: [], movable: true },
+      });
+      canvas.add(grp);
+    }
+
+    
+    function eraseObject(target) {
+      const d = target.data;
+      if (d.labels) d.labels.forEach(l => canvas.remove(l));
+      canvas.remove(target);
+      if (d.kind === 'wall') {
+        const i = store.walls.indexOf(d.ref); if (i > -1) store.walls.splice(i, 1);
+      } else if (d.kind === 'room') {
+        const i = store.rooms.indexOf(d.ref); if (i > -1) store.rooms.splice(i, 1);
+      } else if (d.kind === 'object') {
+        const i = store.objects.indexOf(d.ref); if (i > -1) store.objects.splice(i, 1);
+      }
+      updateInfo(); canvas.renderAll();
+    }
+
+    
+    function reorderCanvas() {
+      const order = { grid: 0, room: 1, roomlabel: 2, wall: 3, object: 4 };
+      const objs = canvas.getObjects().slice();
+      objs.sort((a, b) => (order[a.data?.kind]??3) - (order[b.data?.kind]??3));
+      canvas.clear(); canvas.backgroundColor = '#ffffff';
+      objs.forEach(o => canvas.add(o));
+      canvas.renderAll();
+    }
+
+    
+    function checkDupeName() {
+      const name = document.getElementById('room-name').value.trim();
+      const exists = store.rooms.some(r => r.name === name && r !== editingRoomRef);
+      document.getElementById('name-warn').classList.toggle('show', exists && name.length > 0);
+    }
+
+    
+    function resolveUniqueName(desired) {
+      const existing = new Set(store.rooms.filter(r => r !== editingRoomRef).map(r => r.name));
+      if (!existing.has(desired)) return desired;
+     
+      let n = 2;
+      while (existing.has(`${desired} (${n})`)) n++;
+      return `${desired} (${n})`;
+    }
+
+    
+    function openRoomModal() {
+      document.getElementById('room-modal-title').textContent = 'Configure Room';
+      document.getElementById('room-confirm-btn').textContent = 'Add Room';
+      document.getElementById('room-name').value = '';
+      document.getElementById('room-type').value = 'ward';
+      document.getElementById('room-capacity').value = '10';
+      document.getElementById('room-ventilation').value = '6';
+      document.getElementById('ac-doctor').checked = true;
+      document.getElementById('ac-nurse').checked = true;
+      document.getElementById('ac-volunteer').checked = false;
+      document.getElementById('ac-cleaner').checked = true;
+      document.getElementById('ac-patient').checked = false;
+      document.getElementById('ac-visitor').checked = false;
+      
+      document.getElementById('name-warn').classList.remove('show');
+      updateACHLabel();
+
+      
+      const volRow = document.getElementById('room-volume-row');
+      if (window._pendingPolyPoints && window._pendingPolyPoints.length >= 3) {
+        const areaM2 = polygonAreaM2(window._pendingPolyPoints);
+        const vol = areaM2 * CEILING_H;
+        document.getElementById('room-volume-display').textContent = `${areaM2.toFixed(1)} m² × ${CEILING_H} m = ${vol.toFixed(1)} m³`;
+        volRow.style.display = '';
+      } else {
+        volRow.style.display = 'none';
+      }
+
+      onRoomTypeChange();
+      document.getElementById('room-modal-overlay').classList.add('show');
+      setTimeout(() => document.getElementById('room-name').focus(), 80);
+    }
+
+    
+    function openRoomModalForEdit(ref) {
+      document.getElementById('room-modal-title').textContent = 'Edit Room';
+      document.getElementById('room-confirm-btn').textContent = 'Save Changes';
+      document.getElementById('room-name').value = ref.name;
+      document.getElementById('room-type').value = ref.room_type;
+      document.getElementById('room-capacity').value = ref.capacity || 10;
+      document.getElementById('room-ventilation').value = ref.ventilation_ach || 6;
+      document.getElementById('room-color').value = ref.color || ROOM_TYPE_COLORS[ref.room_type]?.stroke || '#004aad';
+      document.getElementById('ac-doctor').checked = (ref.access||[]).includes('doctor');
+      document.getElementById('ac-nurse').checked = (ref.access||[]).includes('nurse');
+      document.getElementById('ac-volunteer').checked = (ref.access||[]).includes('volunteer');
+      document.getElementById('ac-patient').checked = (ref.access||[]).includes('patient');
+      document.getElementById('ac-visitor').checked = (ref.access||[]).includes('visitor');
+      document.getElementById('ac-cleaner').checked = (ref.access||[]).includes('cleaner');
+      document.getElementById('name-warn').classList.remove('show');
+      updateACHLabel();
+
+      
+      const volRow = document.getElementById('room-volume-row');
+      if (ref.polygon && ref.polygon.length >= 3) {
+        const areaM2 = polygonAreaM2(ref.polygon);
+        const vol = areaM2 * CEILING_H;
+        document.getElementById('room-volume-display').textContent = `${areaM2.toFixed(1)} m² × ${CEILING_H} m = ${vol.toFixed(1)} m³`;
+        volRow.style.display = '';
+      } else {
+        volRow.style.display = 'none';
+      }
+      document.getElementById('room-modal-overlay').classList.add('show');
+      setTimeout(() => document.getElementById('room-name').focus(), 80);
+    }
+
+   
+    function onRoomTypeChange() {
+      const type = document.getElementById('room-type').value;
+      const col = ROOM_TYPE_COLORS[type]?.stroke || '#004aad';
+      document.getElementById('room-color').value = col;
+      document.getElementById('room-color-hint').textContent = `Default for ${ROOM_TYPE_LABELS[type] || type}`;
+    }
+
+    
+    function cancelRoom() {
+      window._pendingPolyPoints = null;
+      editingRoomRef = null;
+      document.getElementById('room-modal-overlay').classList.remove('show');
+    }
+
+    
+    function confirmRoom() {
+      let name = document.getElementById('room-name').value.trim() || 'Room';
+      const room_type = document.getElementById('room-type').value;
+      const color = document.getElementById('room-color').value;
+      const capacity = parseInt(document.getElementById('room-capacity').value) || 10;
+      const ventilation_ach = parseFloat(document.getElementById('room-ventilation').value) || 6;
+      const access = [];
+
+      if (document.getElementById('ac-patient').checked) access.push('patient');
+      if (document.getElementById('ac-visitor').checked) access.push('visitor');
+      if (document.getElementById('ac-cleaner').checked) access.push('cleaner');
+      if (document.getElementById('ac-doctor').checked) access.push('doctor');
+      if (document.getElementById('ac-nurse').checked) access.push('nurse');
+      if (document.getElementById('ac-volunteer').checked) access.push('volunteer');
+
+      
+      if (editingRoomRef) {
+        name = resolveUniqueName(name);
+        editingRoomRef.name = name;
+        editingRoomRef.room_type = room_type;
+        editingRoomRef.color = color;
+        editingRoomRef.capacity = capacity;
+        editingRoomRef.ventilation_ach = ventilation_ach;
+        
+        const areaM2 = polygonAreaM2(editingRoomRef.polygon);
+        editingRoomRef.area_m2 = Math.round(areaM2 * 10) / 10;
+        editingRoomRef.volume_m3 = Math.round(areaM2 * CEILING_H * 10) / 10;
+        editingRoomRef.ceiling_h = CEILING_H;
+        editingRoomRef.access = access;
+        editingRoomRef = null;
+        document.getElementById('room-modal-overlay').classList.remove('show');
+        rebuildCanvas(); saveState();
+        return;
+      }
+
+      
+      const polygon = window._pendingPolyPoints;
+      if (!polygon || polygon.length < 3) { cancelRoom(); return; }
+
+      name = resolveUniqueName(name);
+
+      const areaM2 = polygonAreaM2(polygon);
+      const rec = {
+        id: 'room_' + Date.now(),
+        name, room_type, polygon, access, capacity, ventilation_ach, color,
+        area_m2: Math.round(areaM2 * 10) / 10,
+        volume_m3: Math.round(areaM2 * CEILING_H * 10) / 10,
+        ceiling_h: CEILING_H,
+      };
+      store.rooms.push(rec);
+      renderRoom(rec);
+      reorderCanvas();
+
+      window._pendingPolyPoints = null;
+      document.getElementById('room-modal-overlay').classList.remove('show');
+      updateInfo(); saveState();
+    }
+
+    
+    function renderRoom(rec) {
+      const poly = rec.polygon;
+      const strokeCol = rec.color || ROOM_TYPE_COLORS[rec.room_type]?.stroke || '#004aad';
+      const fillCol = makeRoomFillFromColor(strokeCol);
+      const bbox = polygonBBox(poly);
+
+      
+      const fabricPts = poly.map(p => ({ x: p[0] - bbox.minX, y: p[1] - bbox.minY }));
+
+      const shape = new fabric.Polygon(fabricPts, {
+        left: bbox.minX, top: bbox.minY,
+        fill: fillCol, stroke: strokeCol, strokeWidth: 1.5,
+        selectable: false, evented: true, hoverCursor: 'pointer',
+        objectCaching: false,
+        data: { kind: 'room', ref: rec, labels: [] },
+      });
+
+      
+      const labelX = bbox.minX + 4;
+      const labelY = bbox.minY + 3;
+
+      const nameLabel = new fabric.Text(rec.name, {
+        left: labelX, top: labelY, fontSize: 10, fill: strokeCol,
+        fontFamily: 'monospace', fontWeight: 'bold', selectable: false, evented: false,
+        data: { kind: 'roomlabel' },
+      });
+      const ach = rec.ventilation_ach || 6;
+      const aq = achQuality(ach);
+      const metaText = `${rec.room_type} · cap:${rec.capacity||'?'} · ${ach} ACH (${aq.label})`;
+      const metaLabel = new fabric.Text(metaText, {
+        left: labelX, top: labelY + 13, fontSize: 8, fill: strokeCol,
+        fontFamily: 'monospace', opacity: .6, selectable: false, evented: false,
+        data: { kind: 'roomlabel' },
+      });
+      const volText = `${rec.area_m2 || '?'} m² · ${rec.volume_m3 || '?'} m³`;
+      const volLabel = new fabric.Text(volText, {
+        left: labelX, top: labelY + 24, fontSize: 7, fill: strokeCol,
+        fontFamily: 'monospace', opacity: .45, selectable: false, evented: false,
+        data: { kind: 'roomlabel' },
+      });
+
+      const ventDot = new fabric.Circle({
+        left: bbox.maxX - 14, top: bbox.minY + 4, radius: 4,
+        fill: aq.color,
+        stroke: 'rgba(255,255,255,.3)', strokeWidth: 1,
+        selectable: false, evented: false, data: { kind: 'roomlabel' },
+      });
+
+      shape.data.labels = [nameLabel, metaLabel, volLabel, ventDot];
+
+      canvas.add(shape);
+      canvas.add(nameLabel);
+      canvas.add(metaLabel);
+      canvas.add(volLabel);
+      canvas.add(ventDot);
+    }
+
+    
+    function openDoorModal(px, py) {
+      const sel1 = document.getElementById('door-room1');
+      const sel2 = document.getElementById('door-room2');
+      sel1.innerHTML = '<option value="">(none)</option>';
+      sel2.innerHTML = '<option value="">(none)</option>';
+
+      
+      const sortedRooms = findRoomsNearPoint(px, py);
+
+      sortedRooms.forEach(name => {
+        sel1.innerHTML += `<option value="${name}">${name}</option>`;
+        sel2.innerHTML += `<option value="${name}">${name}</option>`;
+      });
+      
+      if (sortedRooms.length >= 1) sel1.value = sortedRooms[0];
+      if (sortedRooms.length >= 2) sel2.value = sortedRooms[1];
+
+      document.getElementById('door-modal-overlay').classList.add('show');
+    }
+
+    
+    function cancelDoor() {
+      pendingDoorPos = null;
+      document.getElementById('door-modal-overlay').classList.remove('show');
+    }
+
+    
+    function confirmDoor() {
+      if (!pendingDoorPos) return;
+      const r1 = document.getElementById('door-room1').value;
+      const r2 = document.getElementById('door-room2').value;
+      placeObject('door', pendingDoorPos.x, pendingDoorPos.y, [r1, r2].filter(Boolean));
+      pendingDoorPos = null;
+      document.getElementById('door-modal-overlay').classList.remove('show');
+      saveState();
+    }
+
+    
+    function rebuildCanvas() {
+      canvas.clear(); canvas.backgroundColor = '#ffffff';
+      drawGrid();
+      store.rooms.forEach(r => renderRoom(r));
+      store.walls.forEach(w => renderWall(w));
+      store.objects.forEach(o => renderObject(o));
+      reorderCanvas(); updateInfo();
+    }
+
+    
+    function updateInfo() {
+      document.getElementById('inf-walls').textContent = store.walls.length;
+      document.getElementById('inf-rooms').textContent = store.rooms.length;
+      document.getElementById('inf-objs').textContent = store.objects.length;
+    }
+
+    
+    function clearAll() {
+      if (!confirm('Clear the entire floor plan?')) return;
+      store.walls = []; store.rooms = []; store.objects = [];
+      rebuildCanvas(); saveState();
+    }
+
+    
+    function validate() {
+      const issues = [];
+
+      const entrances = store.objects.filter(o => o.type === 'entrance');
+      if (entrances.length === 0) {
+        issues.push({ level: 'err', msg: 'No entrance placed. Agents need at least one entrance/exit point.' });
+      } else {
+        issues.push({ level: 'ok', msg: `${entrances.length} entrance(s) found.` });
+      }
+
+      if (store.rooms.length === 0) {
+        issues.push({ level: 'err', msg: 'No rooms defined.' });
+      } else {
+        issues.push({ level: 'ok', msg: `${store.rooms.length} room(s) defined.` });
+      }
+
+      const doors = store.objects.filter(o => o.type === 'door');
+      store.rooms.forEach(r => {
+        const hasDoor = doors.some(d => d.connects && d.connects.includes(r.name));
+        if (!hasDoor && r.room_type !== 'corridor') {
+          issues.push({ level: 'warn', msg: `Room "${r.name}" has no door connected to it.` });
+        }
+      });
+
+      doors.forEach(d => {
+        if (!d.connects || d.connects.length < 2 || d.connects.some(c => !c)) {
+          issues.push({ level: 'warn', msg: `Door at (${d.x}, ${d.y}) doesn't connect two rooms.` });
+        }
+      });
+
+      if (store.rooms.length > 1 && doors.length > 0) {
+        const adj = {};
+        store.rooms.forEach(r => adj[r.name] = new Set());
+        doors.forEach(d => {
+          if (d.connects?.length === 2 && d.connects[0] && d.connects[1]) {
+            if (adj[d.connects[0]]) adj[d.connects[0]].add(d.connects[1]);
+            if (adj[d.connects[1]]) adj[d.connects[1]].add(d.connects[0]);
+          }
+        });
+        const start = store.rooms[0].name;
+        const visited = new Set([start]), queue = [start];
+        while (queue.length > 0) {
+          const cur = queue.shift();
+          (adj[cur]||new Set()).forEach(n => { if (!visited.has(n)) { visited.add(n); queue.push(n); } });
+        }
+        const unreachable = store.rooms.filter(r => !visited.has(r.name));
+        if (unreachable.length > 0) {
+          issues.push({ level: 'warn', msg: `${unreachable.length} room(s) unreachable from "${start}": ${unreachable.map(r=>r.name).join(', ')}` });
+        } else {
+          issues.push({ level: 'ok', msg: 'All rooms are connected via doors.' });
+        }
+      }
+
+      const names = store.rooms.map(r => r.name);
+      const dupes = names.filter((n, i) => names.indexOf(n) !== i);
+      if (dupes.length > 0) {
+        issues.push({ level: 'warn', msg: `Duplicate room names: ${[...new Set(dupes)].join(', ')}` });
+      }
+
+      return issues;
+    }
+
+    
+    function openExportModal() {
+      const issues = validate();
+      const listEl = document.getElementById('val-list');
+      listEl.innerHTML = '';
+      const icons = { ok: '✓', warn: '⚠', err: '✗' };
+      const cls = { ok: 'val-ok', warn: 'val-warn', err: 'val-err' };
+      issues.forEach(iss => {
+        listEl.innerHTML += `<div class="val-item"><span class="val-icon ${cls[iss.level]}">${icons[iss.level]}</span><span class="val-msg">${iss.msg}</span></div>`;
+      });
+      document.getElementById('export-confirm-btn').disabled = false;
+      document.getElementById('export-modal-overlay').classList.add('show');
+      setTimeout(() => document.getElementById('export-filename').focus(), 80);
+    }
+
+    function closeExportModal() {
+      document.getElementById('export-modal-overlay').classList.remove('show');
+    }
+
+    function doExport() {
+      const fpName = document.getElementById('export-name').value.trim() || 'Custom Hospital';
+      const filename = (document.getElementById('export-filename').value.trim() || 'floor_plan') + '.json';
+
+      const out = {
+        name: fpName, width: W, height: H,
+        ceiling_h: CEILING_H,
+        scale: '1 cell = 1 m',
+        rooms: store.rooms.map(r => ({
+          name: r.name, room_type: r.room_type, polygon: r.polygon,
+          capacity: r.capacity, ventilation_ach: r.ventilation_ach,
+          area_m2: r.area_m2, volume_m3: r.volume_m3, ceiling_h: r.ceiling_h,
+          color: r.color, access: r.access,
+        })),
+        walls: store.walls.map(w => ({ start: [w.x1, w.y1], end: [w.x2, w.y2] })),
+        doors: store.objects.filter(o => o.type === 'door').map(d => ({
+          position: [d.x, d.y], connects: d.connects || [],
+        })),
+        entrances: store.objects.filter(o => o.type === 'entrance').map(o => ({ position: [o.x, o.y] })),
+        beds: store.objects.filter(o => o.type === 'bed').map(o => ({ position: [o.x, o.y] })),
+        nurse_stations: store.objects.filter(o => o.type === 'nursestation').map(o => ({ position: [o.x, o.y] })),
+        grid_size: GRID,
+      };
+
+      const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      Object.assign(document.createElement('a'), { href: url, download: filename }).click();
+      URL.revokeObjectURL(url);
+      closeExportModal();
+    }
+
+    
+    document.addEventListener('keydown', e => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+      if ((e.ctrlKey||e.metaKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
+      if ((e.ctrlKey||e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); redo(); return; }
+
+      const map = { s:'select', w:'wall', r:'room', e:'erase', b:'bed' };
+      if (map[e.key]) setTool(map[e.key]);
+
+      if (e.key === 'Enter' && tool === 'room' && pendingPolygon.length >= 3) {
+        e.preventDefault();
+        finishPolygon();
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        if (tool === 'room' && pendingPolygon.length > 0) { cancelPolygon(); return; }
+        setTool('select');
+        cancelRoom(); cancelDoor(); closeExportModal();
+      }
+
+      if ((e.key === 'Delete' || e.key === 'Backspace') && tool === 'select' && canvas) {
+        const active = canvas.getActiveObject();
+        if (active && active.data?.kind && active.data.kind !== 'grid' && active.data.kind !== 'roomlabel') {
+          eraseObject(active);
+          canvas.discardActiveObject();
+          canvas.renderAll(); saveState();
+        }
+      }
+    });
+
+    ['room-modal-overlay','door-modal-overlay','export-modal-overlay'].forEach(id => {
+      document.getElementById(id).addEventListener('click', e => {
+        if (e.target.id === id) {
+          if (id === 'room-modal-overlay') cancelRoom();
+          else if (id === 'door-modal-overlay') cancelDoor();
+          else closeExportModal();
+        }
+      });
+    });
+    </script>
+  </body>
+</html>
