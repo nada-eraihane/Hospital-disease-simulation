@@ -138,10 +138,10 @@ class HospitalModel(Model):
 
     def _place_at_entrance(self, agent):
         ents=self.floor_plan.entrances
-        if ents: 
+        if ents:
             x,y=ents[0].position
-            self.space.place_agent(agent,(x+random.uniform(-3,3),y+random.uniform(-3,3)))
-        else: 
+            self.space.place_agent(agent,(x+random.uniform(-15,15),y+random.uniform(-15,15)))
+        else:
             self.space.place_agent(agent,(50,self.floor_plan.height/2))
     
     def _place_in_room(self, agent, name):

@@ -35,6 +35,7 @@ sim_running = solara.reactive(False)
 sim_paused = solara.reactive(False)
 sim_tick = solara.reactive(0)
 sim_results = solara.reactive(None)
+sim_sir_history = solara.reactive([])
 
 
 try:

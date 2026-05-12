@@ -18,6 +18,7 @@ STATUS_COLOURS = {Status.SUSCEPTIBLE:"#22C55E",Status.INFECTED:"#EF4444",Status.
 NEAR_FIELD_RADIUS = 1.5
 ADMITTING_ROOM_TYPES = {"ward","icu"}
 STAFFED_ROOM_TYPES = {"ward","icu","special"}
+ENTRANCE_STUCK_TIMEOUT = 30  # ticks near entrance before force-removal (~3s at default speed)
 
 def _dist(a,b): return math.hypot(a[0]-b[0],a[1]-b[1])
 
@@ -25,6 +26,7 @@ def _dist(a,b): return math.hypot(a[0]-b[0],a[1]-b[1])
 class HospitalAgent(Agent):
     ARRIVE_RADIUS = 8.0
     ARRIVE_RADIUS_BED = 10.0
+    ARRIVE_RADIUS_EXIT = 25.0
     SEPARATION_RADIUS = 12.0
     SEPARATION_STRENGTH = 2.0
 
@@ -44,6 +46,7 @@ class HospitalAgent(Agent):
         self.mask_efficiency = 0.0
         self.current_room_name = ""
         self._path_was_set = False
+        self.entrance_stuck_ticks = 0
 
     def set_path_to(self, pos):
         if self.pos is None: return False
@@ -72,12 +75,17 @@ class HospitalAgent(Agent):
         return self.set_path_to_room(rooms[0].name)
 
     def _move(self):
-    
+
         if self.pos is None or self.target_pos is None: return
         dx=self.target_pos[0]-self.pos[0]; dy=self.target_pos[1]-self.pos[1]
         d=math.hypot(dx,dy)
         is_final = self.path_index >= len(self.current_path)-1
-        ar = self.ARRIVE_RADIUS_BED if is_final and self._is_bed_target() else self.ARRIVE_RADIUS
+        if is_final and self._is_entrance_target():
+            ar = self.ARRIVE_RADIUS_EXIT
+        elif is_final and self._is_bed_target():
+            ar = self.ARRIVE_RADIUS_BED
+        else:
+            ar = self.ARRIVE_RADIUS
         if d<=max(ar, self.max_speed):
             if not is_final: self.model.space.move_agent(self, self.target_pos)
             self.path_index+=1
@@ -108,6 +116,11 @@ class HospitalAgent(Agent):
         if not self.current_path: return False
         f=self.current_path[-1]
         return any(_dist(f,b.position)<5 for b in self.model.floor_plan.beds)
+
+    def _is_entrance_target(self):
+        if not self.current_path: return False
+        f=self.current_path[-1]
+        return any(_dist(f,e.position)<15 for e in self.model.floor_plan.entrances)
 
     def is_moving(self): return self.target_pos is not None
     def has_arrived(self): 
@@ -200,13 +213,21 @@ class PatientAgent(HospitalAgent):
                 self.state=self.TRAVELLING; self.next_state=self.AT_BED
             return
         if self.state==self.DISCHARGING:
-            if self.has_arrived(): self.model.remove_agent(self)
+            if self.has_arrived():
+                self.model.remove_agent(self)
+                return
+            ents=self.model.floor_plan.entrances
+            if ents and self.pos and _dist(self.pos,ents[0].position)<=self.ARRIVE_RADIUS_EXIT:
+                self.entrance_stuck_ticks+=1
+                if self.entrance_stuck_ticks>=ENTRANCE_STUCK_TIMEOUT:
+                    self.model.remove_agent(self)
             return
 
     def _go(self,room,state):
         self.state=self.TRAVELLING; self.next_state=state; self.set_path_to_room(room)
     def _discharge(self):
         self.state=self.DISCHARGING
+        self.entrance_stuck_ticks=0
         ents=self.model.floor_plan.entrances
         if ents: self.set_path_to(ents[0].position)
         else: self.model.remove_agent(self)
@@ -385,10 +406,18 @@ class VisitorAgent(HospitalAgent):
             if self.dwell_remaining<=0: self._leave()
             return
         if self.state==self.LEAVING:
-            if self.has_arrived(): self.model.remove_agent(self)
+            if self.has_arrived():
+                self.model.remove_agent(self)
+                return
+            ents=self.model.floor_plan.entrances
+            if ents and self.pos and _dist(self.pos,ents[0].position)<=self.ARRIVE_RADIUS_EXIT:
+                self.entrance_stuck_ticks+=1
+                if self.entrance_stuck_ticks>=ENTRANCE_STUCK_TIMEOUT:
+                    self.model.remove_agent(self)
             return
     def _leave(self):
         self.state=self.LEAVING
+        self.entrance_stuck_ticks=0
         ents=self.model.floor_plan.entrances
         if ents: self.set_path_to(ents[0].position)
         else: self.model.remove_agent(self)
@@ -442,9 +471,17 @@ class VolunteerAgent(HospitalAgent):
         if self.ticks>=self.total_shift:
             if self.state!=self.LEAVING:
                 self.state=self.LEAVING
+                self.entrance_stuck_ticks=0
                 ents=self.model.floor_plan.entrances
                 if ents: self.set_path_to(ents[0].position)
-            elif self.has_arrived(): self.model.remove_agent(self)
+            elif self.has_arrived():
+                self.model.remove_agent(self)
+            else:
+                ents=self.model.floor_plan.entrances
+                if ents and self.pos and _dist(self.pos,ents[0].position)<=self.ARRIVE_RADIUS_EXIT:
+                    self.entrance_stuck_ticks+=1
+                    if self.entrance_stuck_ticks>=ENTRANCE_STUCK_TIMEOUT:
+                        self.model.remove_agent(self)
             return
         if self.state==self.TRAVELLING:
             if self.has_arrived(): self.state=self.AT_ROOM; self.dwell_remaining=random.randint(15,30)

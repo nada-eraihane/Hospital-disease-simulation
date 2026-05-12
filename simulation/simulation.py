@@ -6,7 +6,7 @@ import threading
 from state import (
     current_page, sim_params, model_instance,
     sim_running, sim_paused, sim_tick, sim_results, saved_results,
-    saved_floor_plans,
+    saved_floor_plans, sim_sir_history,
 )
 from agents import (
     HospitalAgent, PatientAgent, DoctorAgent, NurseAgent, CleanerAgent,
@@ -123,7 +123,7 @@ def _render_fp(model, w=780, h=520):
 
     for e in fp.entrances:
         p.append(f'<circle cx="{tx(e.position[0])}" cy="{ty(e.position[1])}" '
-                 f'r="{ts(8)}" fill="#22C55E" opacity="0.3" stroke="#22C55E" stroke-width="1.5"/>')
+                 f'r="{ts(16)}" fill="#22C55E" opacity="0.3" stroke="#22C55E" stroke-width="1.5"/>')
         p.append(f'<text x="{tx(e.position[0])}" y="{ty(e.position[1])-ts(10)}" '
                  f'fill="#22C55E" font-size="9" text-anchor="middle" font-weight="bold" '
                  f'font-family="monospace">ENTRY</text>')
@@ -402,16 +402,17 @@ def SimulationPage():
         m = model_instance.value
         if m is None:
             return
+        sim_sir_history.set([])
         while m.running and sim_running.value:
             if sim_paused.value:
                 time.sleep(0.1)
                 continue
             m.step()
             sim_tick.set(m.tick_count)
+            sim_sir_history.set(list(m.sir_history))
             time.sleep(1.0 / max(1, live_speed))
         sim_running.set(False)
         if m:
-            
             res = m.get_results()
             sim_results.set(res)
 
@@ -421,7 +422,8 @@ def SimulationPage():
         threading.Thread(target=run_loop, daemon=True).start()
 
     living = model._living_agents() if model else []
-    sir_last = model.sir_history[-1] if model and model.sir_history else {}
+    _sir_snap = sim_sir_history.value
+    sir_last = _sir_snap[-1] if _sir_snap else {}
     s_all = sir_last.get("S", 0)
     i_all = sir_last.get("I", 0)
     r_all = sir_last.get("R", 0)
@@ -517,6 +519,7 @@ def SimulationPage():
                             sim_paused.set(True)
                             m.step()
                             sim_tick.set(m.tick_count)
+                            sim_sir_history.set(list(m.sir_history))
 
                     solara.Button(
                         label="⏭",
@@ -544,13 +547,13 @@ def SimulationPage():
                             "border-radius": "10px"},
                 )
 
-                # Live SIR chart (new!)
+                # Live SIR chart
                 solara.HTML(
                     tag="div",
                     unsafe_innerHTML=(
                         '<div style="font-weight:700;color:#17048c;font-size:12px;'
                         'margin-bottom:4px;">SIR Curve</div>'
-                        f'{_sir_chart_html(model.sir_history if model else [], 290, 150)}'
+                        f'{_sir_chart_html(sim_sir_history.value, 290, 150)}'
                     ),
                 )
 
